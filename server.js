@@ -9,7 +9,7 @@ const wss = new WebSocket.Server({ server });
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// rooms: Map<roomId, Map<ws, {id, name}>>
+// rooms: Map<roomId, { peers: Map, musicUrl: string }>
 const rooms = new Map();
 
 function genId() {
@@ -23,7 +23,7 @@ function sendTo(ws, msg) {
 function broadcast(roomId, msg, excludeWs = null) {
   const room = rooms.get(roomId);
   if (!room) return;
-  room.forEach((_, ws) => {
+  room.peers.forEach((_, ws) => {
     if (ws !== excludeWs) sendTo(ws, msg);
   });
 }
@@ -31,7 +31,7 @@ function broadcast(roomId, msg, excludeWs = null) {
 function findWs(roomId, peerId) {
   const room = rooms.get(roomId);
   if (!room) return null;
-  for (const [ws, info] of room.entries()) {
+  for (const [ws, info] of room.peers.entries()) {
     if (info.id === peerId) return ws;
   }
   return null;
@@ -50,19 +50,20 @@ wss.on('connection', (ws) => {
       case 'join': {
         currentRoom = (msg.room || 'default').toLowerCase().trim();
         clientName = (msg.name || 'User').trim().substring(0, 20);
-        if (!rooms.has(currentRoom)) rooms.set(currentRoom, new Map());
+        if (!rooms.has(currentRoom)) rooms.set(currentRoom, { peers: new Map(), musicUrl: '' });
         const room = rooms.get(currentRoom);
         const peers = [];
-        room.forEach((info) => peers.push({ id: info.id, name: info.name }));
-        sendTo(ws, { type: 'joined', yourId: clientId, peers, room: currentRoom });
+        room.peers.forEach((info) => peers.push({ id: info.id, name: info.name }));
+        sendTo(ws, { type: 'joined', yourId: clientId, peers, room: currentRoom, musicUrl: room.musicUrl });
         broadcast(currentRoom, { type: 'peer-joined', id: clientId, name: clientName });
-        room.set(ws, { id: clientId, name: clientName });
-        console.log(`[${currentRoom}] ${clientName} joined. Total: ${room.size}`);
+        room.peers.set(ws, { id: clientId, name: clientName });
+        console.log(`[${currentRoom}] ${clientName} joined. Total: ${room.peers.size}`);
         break;
       }
       case 'offer':
       case 'answer':
-      case 'ice-candidate': {
+      case 'ice-candidate':
+      case 'sync-response': {
         const target = findWs(currentRoom, msg.to);
         if (target) sendTo(target, { ...msg, from: clientId });
         break;
@@ -79,14 +80,27 @@ wss.on('connection', (ws) => {
         });
         break;
       }
+      case 'music': {
+        const room = rooms.get(currentRoom);
+        if (room) {
+          room.musicUrl = msg.url;
+          broadcast(currentRoom, { type: 'music', url: msg.url }, ws);
+        }
+        break;
+      }
+      case 'request-sync': {
+        broadcast(currentRoom, { type: 'request-sync', from: clientId }, ws);
+        break;
+      }
     }
   });
 
   ws.on('close', () => {
     if (currentRoom && rooms.has(currentRoom)) {
-      rooms.get(currentRoom).delete(ws);
+      const room = rooms.get(currentRoom);
+      room.peers.delete(ws);
       broadcast(currentRoom, { type: 'peer-left', id: clientId, name: clientName });
-      if (rooms.get(currentRoom).size === 0) rooms.delete(currentRoom);
+      if (room.peers.size === 0) rooms.delete(currentRoom);
       console.log(`[${currentRoom}] ${clientName} left.`);
     }
   });
