@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<title>Radio Room 📻</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Inter',sans-serif;background:#09091a;color:#fff;min-height:100vh;overflow-x:hidden;overflow-y:auto}
+:root{--purple:#8b5cf6;--cyan:#22d3ee;--pink:#ec4899;--glass:rgba(255,255,255,0.06);--border:rgba(255,255,255,0.1)}
+.orb{position:fixed;border-radius:50%;filter:blur(80px);opacity:0.25;pointer-events:none;z-index:0}
+.orb1{width:350px;height:350px;background:var(--purple);top:-80px;left:-80px;animation:f1 8s ease-in-out infinite}
+.orb2{width:250px;height:250px;background:var(--cyan);bottom:-40px;right:-40px;animation:f2 10s ease-in-out infinite}
+@keyframes f1{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,30px)}}
+@keyframes f2{0%,100%{transform:translate(0,0)}50%{transform:translate(-20px,-20px)}}
+
+/* ── LANDING ── */
+#landing{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem}
+.card{background:var(--glass);border:1px solid var(--border);backdrop-filter:blur(20px);border-radius:24px;padding:2.5rem 2rem;width:100%;max-width:400px;text-align:center}
+.logo{font-size:3rem;margin-bottom:.5rem}
+h1{font-size:2rem;font-weight:800;background:linear-gradient(135deg,var(--purple),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.4rem}
+.sub{color:rgba(255,255,255,.5);font-size:.9rem;margin-bottom:2rem;line-height:1.5}
+.ig{margin-bottom:1rem;text-align:left}
+label{display:block;font-size:.75rem;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem}
+input[type=text]{width:100%;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;color:#fff;font-size:1rem;font-family:'Inter',sans-serif;outline:none;transition:border .2s}
+input[type=text]:focus{border-color:var(--purple)}
+input[type=text]::placeholder{color:rgba(255,255,255,.3)}
+.btn-join{width:100%;padding:1rem;background:linear-gradient(135deg,var(--purple),#6d28d9);border:none;border-radius:12px;color:#fff;font-size:1.05rem;font-weight:700;cursor:pointer;margin-top:.5rem;transition:transform .15s,box-shadow .15s}
+.btn-join:active{transform:scale(.97)}
+
+/* ── APP ── */
+#app{display:none;flex-direction:column;height:100vh;position:relative;z-index:1;overflow:hidden}
+
+/* Top bar */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.25rem;background:rgba(0,0,0,.4);border-bottom:1px solid var(--border);backdrop-filter:blur(20px);flex-shrink:0}
+.room-badge{background:linear-gradient(135deg,var(--purple),var(--cyan));border-radius:8px;padding:.3rem .8rem;font-size:.85rem;font-weight:700}
+.pcount{color:rgba(255,255,255,.5);font-size:.8rem;margin-left:.6rem}
+.btn-leave{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:.4rem .9rem;border-radius:8px;cursor:pointer;font-size:.82rem;font-weight:600}
+
+/* Tab nav */
+.tabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.3);flex-shrink:0}
+.tab{flex:1;padding:.75rem;text-align:center;font-size:.82rem;font-weight:600;color:rgba(255,255,255,.4);cursor:pointer;border-bottom:2px solid transparent;transition:color .2s,border-color .2s}
+.tab.active{color:#fff;border-color:var(--purple)}
+
+/* Panels */
+.panels{flex:1;overflow:hidden;position:relative}
+.panel{display:none;height:100%;overflow-y:auto;padding:1.25rem}
+.panel.active{display:flex;flex-direction:column;gap:1rem}
+
+/* Music panel */
+.viz{display:flex;align-items:flex-end;justify-content:center;gap:5px;height:70px;margin:0 auto}
+.vb{width:9px;background:linear-gradient(to top,var(--purple),var(--cyan));border-radius:4px;min-height:4px}
+.viz.playing .vb{animation:bv .8s ease-in-out infinite}
+.vb:nth-child(1){height:18px;animation-delay:0s}
+.vb:nth-child(2){height:34px;animation-delay:.1s}
+.vb:nth-child(3){height:54px;animation-delay:.2s}
+.vb:nth-child(4){height:68px;animation-delay:.3s}
+.vb:nth-child(5){height:58px;animation-delay:.15s}
+.vb:nth-child(6){height:44px;animation-delay:.25s}
+.vb:nth-child(7){height:30px;animation-delay:.05s}
+.vb:nth-child(8){height:14px;animation-delay:.35s}
+@keyframes bv{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
+.np{text-align:center}
+.np-lbl{font-size:.72rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.2rem}
+.np-title{font-size:.95rem;font-weight:600}
+.music-box{background:var(--glass);border:1px solid var(--border);border-radius:16px;padding:1.25rem;display:flex;flex-direction:column;gap:.9rem}
+.pl-row{display:flex;gap:.5rem}
+.pl-inp{flex:1;background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:10px;padding:.7rem .9rem;color:#fff;font-size:.85rem;outline:none;min-width:0}
+.pl-inp:focus{border-color:var(--cyan)}
+.pl-inp::placeholder{color:rgba(255,255,255,.3)}
+.btn-load{background:var(--cyan);border:none;color:#000;border-radius:10px;padding:.7rem 1rem;font-size:.85rem;font-weight:700;cursor:pointer;white-space:nowrap}
+.vol-row{display:flex;align-items:center;gap:.75rem}
+.vol-icon{font-size:1.1rem}
+input[type=range]{flex:1;-webkit-appearance:none;height:4px;background:rgba(255,255,255,.15);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;background:var(--purple);border-radius:50%;cursor:pointer}
+.vol-val{font-size:.8rem;color:rgba(255,255,255,.5);min-width:28px}
+
+/* Participants panel */
+.peer-card{display:flex;align-items:center;gap:.9rem;background:var(--glass);border:1px solid var(--border);border-radius:14px;padding:.9rem 1rem;transition:border-color .2s}
+.peer-card.talking{border-color:var(--purple);background:rgba(139,92,246,.1)}
+.av{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;flex-shrink:0;border:2px solid transparent;transition:border-color .2s,box-shadow .2s}
+.peer-card.talking .av{border-color:var(--purple);box-shadow:0 0 12px rgba(139,92,246,.5)}
+.pname{font-size:.95rem;font-weight:600}
+.pdot{width:9px;height:9px;border-radius:50%;background:var(--purple);margin-left:auto;opacity:0;transition:opacity .2s}
+.peer-card.talking .pdot{opacity:1;animation:bl .8s ease-in-out infinite}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* Chat panel */
+.chat-msgs{flex:1;display:flex;flex-direction:column;gap:.6rem;padding-bottom:.5rem}
+.cmsg{background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:.7rem .9rem;font-size:.87rem}
+.cmsg .cname{font-weight:700;color:var(--cyan)}
+.cmsg .ctime{font-size:.72rem;color:rgba(255,255,255,.3);margin-left:.4rem}
+.cmsg .ctext{color:rgba(255,255,255,.85);margin-top:.2rem}
+.chat-input-row{display:flex;gap:.5rem;padding-top:.5rem;flex-shrink:0}
+.chat-inp{flex:1;background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:12px;padding:.8rem 1rem;color:#fff;font-size:.9rem;outline:none;min-width:0}
+.chat-inp:focus{border-color:var(--cyan)}
+.chat-inp::placeholder{color:rgba(255,255,255,.3)}
+.btn-send{background:var(--purple);border:none;color:#fff;border-radius:12px;padding:.8rem 1.1rem;font-size:1rem;cursor:pointer;flex-shrink:0}
+
+/* Fixed mic bottom bar */
+.mic-bar{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:.4rem;padding:.9rem;background:rgba(0,0,0,.5);border-top:1px solid var(--border);backdrop-filter:blur(20px)}
+.btn-mic{width:72px;height:72px;border-radius:50%;border:none;font-size:1.8rem;cursor:pointer;transition:all .2s;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.2)}
+.btn-mic.on{background:linear-gradient(135deg,#ef4444,#dc2626);border-color:#ef4444;box-shadow:0 0 28px rgba(239,68,68,.5);animation:pr 1.5s ease-in-out infinite}
+@keyframes pr{0%,100%{box-shadow:0 0 20px rgba(239,68,68,.4)}50%{box-shadow:0 0 40px rgba(239,68,68,.7)}}
+.mic-lbl{font-size:.72rem;color:rgba(255,255,255,.4);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+
+/* Toast */
+.toast{position:fixed;bottom:6rem;left:50%;transform:translateX(-50%);background:rgba(20,20,40,.97);border:1px solid var(--border);border-radius:12px;padding:.7rem 1.5rem;font-size:.85rem;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+
+/* Hidden YT player */
+#yt-player{position:absolute;top:-9999px;left:-9999px;width:1px;height:1px}
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<!-- LANDING -->
+<div id="landing">
+  <div class="card">
+    <div class="logo">📻</div>
+    <h1>Radio Room</h1>
+    <p class="sub">Music plays when quiet.<br>Talk when you're ready. Anyone can join.</p>
+    <div class="ig"><label>Your Name</label><input id="inp-name" type="text" placeholder="e.g. DJ Bashir" maxlength="20"/></div>
+    <div class="ig"><label>Room Code</label><input id="inp-room" type="text" placeholder="e.g. squad2025" maxlength="30"/></div>
+    <button class="btn-join" onclick="joinRoom()">🚀 Join Room</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div style="display:flex;align-items:center">
+      <div class="room-badge" id="room-label">#room</div>
+      <span class="pcount" id="peer-count">1 listener</span>
+    </div>
+    <button class="btn-leave" onclick="leaveRoom()">Leave ✕</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('music',this)">🎵 Music</div>
+    <div class="tab" onclick="showTab('people',this)">👥 People</div>
+    <div class="tab" onclick="showTab('chat',this)">💬 Chat</div>
+  </div>
+
+  <div class="panels">
+    <!-- Music Tab -->
+    <div class="panel active" id="tab-music">
+      <div class="viz" id="viz">
+        <div class="vb"></div><div class="vb"></div><div class="vb"></div><div class="vb"></div>
+        <div class="vb"></div><div class="vb"></div><div class="vb"></div><div class="vb"></div>
+      </div>
+      <div class="np">
+        <div class="np-lbl">Now Playing</div>
+        <div class="np-title" id="np-title">Paste a YouTube link below ↓</div>
+      </div>
+      <div class="music-box">
+        <div class="pl-row">
+          <input class="pl-inp" id="pl-url" placeholder="YouTube playlist or video URL" type="url"/>
+          <button class="btn-load" onclick="loadPlaylist()">▶ Play</button>
+        </div>
+        <div class="vol-row">
+          <span class="vol-icon">🔊</span>
+          <input type="range" id="vol" min="0" max="100" value="70" oninput="setVol(this.value)"/>
+          <span class="vol-val" id="vol-val">70</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- People Tab -->
+    <div class="panel" id="tab-people">
+      <div id="participants"></div>
+    </div>
+
+    <!-- Chat Tab -->
+    <div class="panel" id="tab-chat" style="padding-bottom:.5rem">
+      <div class="chat-msgs" id="chat-msgs"></div>
+      <div class="chat-input-row">
+        <input class="chat-inp" id="chat-inp" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendChat()"/>
+        <button class="btn-send" onclick="sendChat()">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="mic-bar">
+    <button class="btn-mic muted" id="btn-mic" onclick="toggleMic()">🎤</button>
+    <div class="mic-lbl" id="mic-lbl">Tap to talk</div>
+  </div>
+</div>
+
+<div id="yt-player"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──
+let ws,myId,myName,myRoom;
+let peers={};
+let localStream=null;
+let micActive=false;
+let talkingPeers=new Set();
+let ytPlayer=null,ytReady=false;
+let musicVol=70;
+let vadOn=false;
+
+const ICE={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]};
+const COLORS=['#8b5cf6','#22d3ee','#ec4899','#f59e0b','#10b981','#3b82f6'];
+
+// ── YouTube ──
+(function(){var s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.appendChild(s)})();
+window.onYouTubeIframeAPIReady=function(){
+  ytPlayer=new YT.Player('yt-player',{height:'1',width:'1',
+    playerVars:{autoplay:1,loop:1,listType:'playlist',list:'PLofht4SFpNSS0X3a0fFpO0ndbSQqjnkD1'},
+    events:{
+      onReady:e=>{ytReady=true;e.target.setVolume(musicVol);},
+      onStateChange:e=>{
+        document.getElementById('viz').classList.toggle('playing',e.data===YT.PlayerState.PLAYING);
+        if(e.data===YT.PlayerState.ENDED)ytPlayer.playVideo();
+      }
+    }
+  });
+};
+
+function loadPlaylist(){
+  const url=document.getElementById('pl-url').value.trim();
+  if(!url||!ytReady){showToast('Player not ready yet');return;}
+  const lm=url.match(/[&?]list=([^&]+)/);
+  const vm=url.match(/(?:v=|youtu\.be\/)([^&?]+)/);
+  if(lm){ytPlayer.loadPlaylist({listType:'playlist',list:lm[1],index:0});document.getElementById('np-title').textContent='🎵 Playlist playing...';showToast('Playlist loaded!');}
+  else if(vm){ytPlayer.loadVideoById(vm[1]);document.getElementById('np-title').textContent='🎵 Video playing...';showToast('Video loaded!');}
+  else showToast('Invalid URL — use a YouTube link');
+}
+
+function setVol(v){
+  musicVol=parseInt(v);
+  document.getElementById('vol-val').textContent=v;
+  if(ytReady&&talkingPeers.size===0)ytPlayer.setVolume(musicVol);
+}
+
+function duck(on){if(ytReady)ytPlayer.setVolume(on?10:musicVol);}
+
+// ── Join ──
+function joinRoom(){
+  const n=document.getElementById('inp-name').value.trim();
+  const r=document.getElementById('inp-room').value.trim();
+  if(!n){showToast('Enter your name');return;}
+  if(!r){showToast('Enter a room code');return;}
+  myName=n;myRoom=r.toLowerCase();
+  document.getElementById('landing').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('room-label').textContent='#'+myRoom;
+  addPeer('me',myName,true);
+  connectWS();
+}
+
+function connectWS(){
+  const proto=location.protocol==='https:'?'wss:':'ws:';
+  ws=new WebSocket(proto+'//'+location.host);
+  ws.onopen=()=>ws.send(JSON.stringify({type:'join',room:myRoom,name:myName}));
+  ws.onmessage=e=>handleSignal(JSON.parse(e.data));
+  ws.onclose=()=>showToast('Connection lost — reload to reconnect');
+}
+
+// ── Signaling ──
+async function handleSignal(msg){
+  switch(msg.type){
+    case 'joined':myId=msg.yourId;for(const p of msg.peers)await makeOffer(p.id,p.name);updateCount();break;
+    case 'peer-joined':showToast(msg.name+' joined 👋');addPeer(msg.id,msg.name,false);updateCount();break;
+    case 'offer':await handleOffer(msg);break;
+    case 'answer':if(peers[msg.from])await peers[msg.from].conn.setRemoteDescription(msg.sdp);break;
+    case 'ice-candidate':if(peers[msg.from])await peers[msg.from].conn.addIceCandidate(msg.candidate);break;
+    case 'peer-left':removePeer(msg.id,msg.name);updateCount();break;
+    case 'talking':updateTalking(msg.id,msg.active);break;
+    case 'chat':addMsg(msg.name,msg.text,msg.time);break;
+  }
+}
+
+// ── WebRTC ──
+function makePC(pid){
+  const pc=new RTCPeerConnection(ICE);
+  pc.onicecandidate=e=>{if(e.candidate)ws.send(JSON.stringify({type:'ice-candidate',to:pid,candidate:e.candidate}));};
+  pc.ontrack=e=>{
+    let a=document.getElementById('audio-'+pid);
+    if(!a){a=document.createElement('audio');a.id='audio-'+pid;a.autoplay=true;document.body.appendChild(a);}
+    a.srcObject=e.streams[0];
+  };
+  if(localStream)localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
+  return pc;
+}
+
+async function makeOffer(pid,pname){
+  const pc=makePC(pid);peers[pid]={conn:pc,name:pname};addPeer(pid,pname,false);
+  const o=await pc.createOffer();await pc.setLocalDescription(o);
+  ws.send(JSON.stringify({type:'offer',to:pid,sdp:o}));
+}
+
+async function handleOffer(msg){
+  let p=peers[msg.from];
+  if(!p){
+    const pc=makePC(msg.from);p={conn:pc,name:msg.name||'User'};peers[msg.from]=p;
+    addPeer(msg.from, p.name, false);
+  }
+  await p.conn.setRemoteDescription(msg.sdp);
+  const a=await p.conn.createAnswer();await p.conn.setLocalDescription(a);
+  ws.send(JSON.stringify({type:'answer',to:msg.from,sdp:a}));
+}
+
+function removePeer(id,name){
+  if(peers[id]){peers[id].conn.close();delete peers[id];}
+  document.getElementById('p-'+id)?.remove();
+  talkingPeers.delete(id);if(talkingPeers.size===0)duck(false);
+  showToast(name+' left');
+}
+
+// ── Mic ──
+async function toggleMic(){
+  if(!localStream){
+    try{
+      localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+      localStream.getTracks().forEach(t=>Object.values(peers).forEach(p=>p.conn.addTrack(t,localStream)));
+      setupVAD(localStream);
+      for(const [pid, p] of Object.entries(peers)){
+        try{
+          const o=await p.conn.createOffer();
+          await p.conn.setLocalDescription(o);
+          ws.send(JSON.stringify({type:'offer',to:pid,sdp:o}));
+        }catch(e){}
+      }
+    }catch{showToast('Mic access denied');return;}
+  }
+  micActive=!micActive;
+  localStream.getAudioTracks().forEach(t=>t.enabled=micActive);
+  const btn=document.getElementById('btn-mic');
+  const lbl=document.getElementById('mic-lbl');
+  if(micActive){btn.classList.remove('muted');btn.classList.add('on');btn.textContent='🎙️';lbl.textContent='You are LIVE 🔴';vadOn=true;}
+  else{btn.classList.remove('on');btn.classList.add('muted');btn.textContent='🎤';lbl.textContent='Tap to talk';vadOn=false;myTalking(false);}
+}
+
+function setupVAD(stream){
+  const ctx=new AudioContext();
+  const src=ctx.createMediaStreamSource(stream);
+  const an=ctx.createAnalyser();an.fftSize=512;src.connect(an);
+  const d=new Uint8Array(an.frequencyBinCount);
+  let talking=false,st=null;
+  function loop(){
+    an.getByteFrequencyData(d);
+    const avg=d.reduce((a,b)=>a+b,0)/d.length;
+    if(vadOn&&avg>12){
+      if(!talking){talking=true;myTalking(true);}
+      clearTimeout(st);st=setTimeout(()=>{talking=false;myTalking(false);},1200);
+    }
+    requestAnimationFrame(loop);
+  }loop();
+}
+
+function myTalking(on){
+  const el=document.getElementById('p-me');
+  if(el)on?el.classList.add('talking'):el.classList.remove('talking');
+  if(on){talkingPeers.add('me');duck(true);}
+  else{talkingPeers.delete('me');if(talkingPeers.size===0)duck(false);}
+  ws.send(JSON.stringify({type:'talking',active:on}));
+}
+
+function updateTalking(id,on){
+  const el=document.getElementById('p-'+id);
+  if(el)on?el.classList.add('talking'):el.classList.remove('talking');
+  if(on){talkingPeers.add(id);duck(true);}
+  else{talkingPeers.delete(id);if(talkingPeers.size===0)duck(false);}
+}
+
+// ── UI ──
+function showTab(name,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  el.classList.add('active');
+}
+
+function avatarColor(name){return COLORS[name.charCodeAt(0)%COLORS.length];}
+function initials(name){return name.split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);}
+
+function addPeer(id,name,isMe){
+  if(document.getElementById('p-'+id))return;
+  const div=document.createElement('div');
+  div.className='peer-card';div.id='p-'+id;
+  const c=avatarColor(name);
+  div.innerHTML=`<div class="av" style="background:${c}20;color:${c};border-color:${c}40">${initials(name)}</div>
+    <span class="pname">${name}${isMe?' (you)':''}</span><div class="pdot"></div>`;
+  document.getElementById('participants').appendChild(div);
+}
+
+function updateCount(){
+  const n=Object.keys(peers).length+1;
+  document.getElementById('peer-count').textContent=n+' listener'+(n>1?'s':'');
+}
+
+function addMsg(name,text,time){
+  const div=document.createElement('div');
+  div.className='cmsg';
+  div.innerHTML=`<div><span class="cname">${name}</span><span class="ctime">${time}</span></div><div class="ctext">${text}</div>`;
+  const c=document.getElementById('chat-msgs');
+  c.appendChild(div);c.scrollTop=c.scrollHeight;
+  showToast('💬 '+name+': '+text.substring(0,30));
+}
+
+function sendChat(){
+  const inp=document.getElementById('chat-inp');
+  const text=inp.value.trim();
+  if(!text||!ws)return;
+  ws.send(JSON.stringify({type:'chat',text}));
+  addMsg(myName+' (you)',text,new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
+  inp.value='';
+}
+
+function leaveRoom(){if(ws)ws.close();location.reload();}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._timer);t._timer=setTimeout(()=>t.classList.remove('show'),3000);
+}
+</script>
+</body>
+</html>
