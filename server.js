@@ -50,11 +50,11 @@ wss.on('connection', (ws) => {
       case 'join': {
         currentRoom = (msg.room || 'default').toLowerCase().trim();
         clientName = (msg.name || 'User').trim().substring(0, 20);
-        if (!rooms.has(currentRoom)) rooms.set(currentRoom, { peers: new Map(), musicUrl: '' });
+        if (!rooms.has(currentRoom)) rooms.set(currentRoom, { peers: new Map(), musicUrl: '', queue: [] });
         const room = rooms.get(currentRoom);
         const peers = [];
         room.peers.forEach((info) => peers.push({ id: info.id, name: info.name }));
-        sendTo(ws, { type: 'joined', yourId: clientId, peers, room: currentRoom, musicUrl: room.musicUrl });
+        sendTo(ws, { type: 'joined', yourId: clientId, peers, room: currentRoom, musicUrl: room.musicUrl, queue: room.queue });
         broadcast(currentRoom, { type: 'peer-joined', id: clientId, name: clientName });
         room.peers.set(ws, { id: clientId, name: clientName });
         console.log(`[${currentRoom}] ${clientName} joined. Total: ${room.peers.size}`);
@@ -90,6 +90,28 @@ wss.on('connection', (ws) => {
       }
       case 'request-sync': {
         broadcast(currentRoom, { type: 'request-sync', from: clientId }, ws);
+        break;
+      }
+      case 'add-queue': {
+        const room = rooms.get(currentRoom);
+        if (room) {
+          room.queue.push(msg.url);
+          broadcast(currentRoom, { type: 'queue-update', queue: room.queue });
+        }
+        break;
+      }
+      case 'pop-queue': {
+        const room = rooms.get(currentRoom);
+        if (room && room.queue.length > 0) {
+          // Debounce pop so multiple users ending video at same time don't pop multiple songs
+          if (Date.now() - (room.lastPop || 0) < 3000) return;
+          room.lastPop = Date.now();
+          
+          const nextUrl = room.queue.shift();
+          room.musicUrl = nextUrl;
+          broadcast(currentRoom, { type: 'music', url: nextUrl });
+          broadcast(currentRoom, { type: 'queue-update', queue: room.queue });
+        }
         break;
       }
     }
