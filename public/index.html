@@ -160,8 +160,18 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
         <div class="pl-row">
           <input class="pl-inp" id="pl-url" placeholder="YouTube playlist or video URL" type="url"/>
           <button class="btn-load" onclick="loadPlaylist()">▶ Play</button>
+          <button class="btn-load" style="background:var(--purple);color:#fff" onclick="addToQueue()">+ Queue</button>
+        </div>
+        <div id="queue-container" style="font-size:0.8rem;color:#aaa;margin--top:0.5rem;display:none;">
+          <div style="font-weight:bold;margin-bottom:0.3rem">Next in Queue:</div>
+          <div id="queue-list" style="display:flex;flex-direction:column;gap:0.3rem"></div>
         </div>
         <div class="vol-row">
+          <span class="vol-icon">🔊</span>
+          <input type="range" id="vol" min="0" max="100" value="70" oninput="setVol(this.value)"/>
+          <span class="vol-val" id="vol-val">70</span>
+          <button onclick="forceSync()" style="margin-left:auto;background:rgba(255,255,255,0.1);border:1px solid var(--border);color:rgba(255,255,255,0.9);border-radius:6px;padding:0.3rem 0.6rem;font-size:0.75rem;cursor:pointer;transition:background 0.2s">🔄 Sync Now</button>
+        </div>
           <span class="vol-icon">🔊</span>
           <input type="range" id="vol" min="0" max="100" value="70" oninput="setVol(this.value)"/>
           <span class="vol-val" id="vol-val">70</span>
@@ -216,7 +226,13 @@ window.onYouTubeIframeAPIReady=function(){
       onReady:e=>{ytReady=true;e.target.setVolume(musicVol);},
       onStateChange:e=>{
         document.getElementById('viz').classList.toggle('playing',e.data===YT.PlayerState.PLAYING);
-        if(e.data===YT.PlayerState.ENDED)ytPlayer.playVideo();
+        if(e.data===YT.PlayerState.ENDED){
+           if(window.appQueue && window.appQueue.length > 0) {
+             if(ws) ws.send(JSON.stringify({type: 'pop-queue'}));
+           } else {
+             ytPlayer.playVideo();
+           }
+        }
       }
     }
   });
@@ -237,6 +253,37 @@ function loadPlaylist(urlInput, fromNetwork = false){
   else { showToast('Invalid URL — use a YouTube link'); return; }
   
   if(!fromNetwork) showToast('Music updated for everyone!');
+}
+
+function addToQueue(){
+  const url = document.getElementById('pl-url').value.trim();
+  if(!url) return;
+  if(ws) ws.send(JSON.stringify({type: 'add-queue', url}));
+  document.getElementById('pl-url').value = '';
+}
+
+function renderQueue(){
+  const qc = document.getElementById('queue-container');
+  const ql = document.getElementById('queue-list');
+  if(!window.appQueue || window.appQueue.length === 0){
+    qc.style.display = 'none';
+    return;
+  }
+  qc.style.display = 'block';
+  ql.innerHTML = '';
+  window.appQueue.forEach((u, i) => {
+    const div = document.createElement('div');
+    // Extract video ID for nicer display if possible
+    const vm = u.match(/(?:v=|youtu\.be\/)([^&?]+)/);
+    div.textContent = (i+1) + '. ' + (vm ? `YouTube Video (${vm[1].substring(0,6)}...)` : 'YouTube Playlist');
+    ql.appendChild(div);
+  });
+}
+
+function forceSync() {
+  window.hasSynced = false;
+  if(ws) ws.send(JSON.stringify({type: 'request-sync'}));
+  showToast('Requesting sync...');
 }
 
 function setVol(v){
@@ -274,6 +321,8 @@ async function handleSignal(msg){
   switch(msg.type){
     case 'joined':
       myId=msg.yourId;
+      window.appQueue = msg.queue || [];
+      renderQueue();
       for(const p of msg.peers)await makeOffer(p.id,p.name);
       if(msg.peers.length > 0) {
         ws.send(JSON.stringify({type: 'request-sync'}));
@@ -296,28 +345,35 @@ async function handleSignal(msg){
       loadPlaylist(msg.url, true);
       break;
     case 'request-sync':
-      if (ytReady && ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+      if (ytReady) {
          let url = document.getElementById('pl-url').value.trim();
          if (!url) url = 'https://www.youtube.com/playlist?list=PLofht4SFpNSS0X3a0fFpO0ndbSQqjnkD1';
-         const time = ytPlayer.getCurrentTime();
-         const index = url.includes('list=') ? ytPlayer.getPlaylistIndex() : 0;
-         ws.send(JSON.stringify({ type: 'sync-response', to: msg.from, url, time, index }));
+         const time = ytPlayer.getCurrentTime() || 0;
+         const index = url.includes('list=') ? (ytPlayer.getPlaylistIndex() || 0) : 0;
+         const ts = Date.now();
+         ws.send(JSON.stringify({ type: 'sync-response', to: msg.from, url, time, index, ts }));
       }
       break;
     case 'sync-response':
       if(!window.hasSynced) {
         window.hasSynced = true;
         document.getElementById('pl-url').value = msg.url;
+        const delay = (Date.now() - (msg.ts || Date.now())) / 1000;
+        const adjustedTime = msg.time + delay;
         const lm=msg.url.match(/[&?]list=([^&]+)/);
         const vm=msg.url.match(/(?:v=|youtu\.be\/)([^&?]+)/);
         if(lm) {
-           ytPlayer.loadPlaylist({listType:'playlist',list:lm[1],index:msg.index,startSeconds:msg.time});
+           ytPlayer.loadPlaylist({listType:'playlist',list:lm[1],index:msg.index,startSeconds:adjustedTime});
            document.getElementById('np-title').textContent='🎵 Playlist synced...';
         } else if(vm) {
-           ytPlayer.loadVideoById({videoId:vm[1],startSeconds:msg.time});
+           ytPlayer.loadVideoById({videoId:vm[1],startSeconds:adjustedTime});
            document.getElementById('np-title').textContent='🎵 Video synced...';
         }
       }
+      break;
+    case 'queue-update':
+      window.appQueue = msg.queue;
+      renderQueue();
       break;
   }
 }
