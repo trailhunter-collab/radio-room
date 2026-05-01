@@ -222,14 +222,21 @@ window.onYouTubeIframeAPIReady=function(){
   });
 };
 
-function loadPlaylist(){
-  const url=document.getElementById('pl-url').value.trim();
+function loadPlaylist(urlInput, fromNetwork = false){
+  const url = urlInput || document.getElementById('pl-url').value.trim();
   if(!url||!ytReady){showToast('Player not ready yet');return;}
+  
+  if(!fromNetwork && ws) {
+    ws.send(JSON.stringify({ type: 'music', url: url }));
+  }
+
   const lm=url.match(/[&?]list=([^&]+)/);
   const vm=url.match(/(?:v=|youtu\.be\/)([^&?]+)/);
-  if(lm){ytPlayer.loadPlaylist({listType:'playlist',list:lm[1],index:0});document.getElementById('np-title').textContent='🎵 Playlist playing...';showToast('Playlist loaded!');}
-  else if(vm){ytPlayer.loadVideoById(vm[1]);document.getElementById('np-title').textContent='🎵 Video playing...';showToast('Video loaded!');}
-  else showToast('Invalid URL — use a YouTube link');
+  if(lm){ytPlayer.loadPlaylist({listType:'playlist',list:lm[1],index:0});document.getElementById('np-title').textContent='🎵 Playlist playing...';}
+  else if(vm){ytPlayer.loadVideoById(vm[1]);document.getElementById('np-title').textContent='🎵 Video playing...';}
+  else { showToast('Invalid URL — use a YouTube link'); return; }
+  
+  if(!fromNetwork) showToast('Music updated for everyone!');
 }
 
 function setVol(v){
@@ -265,7 +272,17 @@ function connectWS(){
 // ── Signaling ──
 async function handleSignal(msg){
   switch(msg.type){
-    case 'joined':myId=msg.yourId;for(const p of msg.peers)await makeOffer(p.id,p.name);updateCount();break;
+    case 'joined':
+      myId=msg.yourId;
+      for(const p of msg.peers)await makeOffer(p.id,p.name);
+      if(msg.peers.length > 0) {
+        ws.send(JSON.stringify({type: 'request-sync'}));
+      } else if (msg.musicUrl && ytReady) {
+         document.getElementById('pl-url').value = msg.musicUrl;
+         loadPlaylist(msg.musicUrl, true);
+      }
+      updateCount();
+      break;
     case 'peer-joined':showToast(msg.name+' joined 👋');addPeer(msg.id,msg.name,false);updateCount();break;
     case 'offer':await handleOffer(msg);break;
     case 'answer':if(peers[msg.from])await peers[msg.from].conn.setRemoteDescription(msg.sdp);break;
@@ -273,6 +290,35 @@ async function handleSignal(msg){
     case 'peer-left':removePeer(msg.id,msg.name);updateCount();break;
     case 'talking':updateTalking(msg.id,msg.active);break;
     case 'chat':addMsg(msg.name,msg.text,msg.time);break;
+    case 'music':
+      document.getElementById('pl-url').value = msg.url;
+      window.hasSynced = true;
+      loadPlaylist(msg.url, true);
+      break;
+    case 'request-sync':
+      if (ytReady && ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+         let url = document.getElementById('pl-url').value.trim();
+         if (!url) url = 'https://www.youtube.com/playlist?list=PLofht4SFpNSS0X3a0fFpO0ndbSQqjnkD1';
+         const time = ytPlayer.getCurrentTime();
+         const index = url.includes('list=') ? ytPlayer.getPlaylistIndex() : 0;
+         ws.send(JSON.stringify({ type: 'sync-response', to: msg.from, url, time, index }));
+      }
+      break;
+    case 'sync-response':
+      if(!window.hasSynced) {
+        window.hasSynced = true;
+        document.getElementById('pl-url').value = msg.url;
+        const lm=msg.url.match(/[&?]list=([^&]+)/);
+        const vm=msg.url.match(/(?:v=|youtu\.be\/)([^&?]+)/);
+        if(lm) {
+           ytPlayer.loadPlaylist({listType:'playlist',list:lm[1],index:msg.index,startSeconds:msg.time});
+           document.getElementById('np-title').textContent='🎵 Playlist synced...';
+        } else if(vm) {
+           ytPlayer.loadVideoById({videoId:vm[1],startSeconds:msg.time});
+           document.getElementById('np-title').textContent='🎵 Video synced...';
+        }
+      }
+      break;
   }
 }
 
